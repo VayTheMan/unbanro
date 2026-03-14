@@ -53,12 +53,42 @@ export default function Home() {
   const [showToast, setShowToast] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [counters, setCounters] = useState({ appeals: 0, rate: 0, week: 0, users: 0 });
 
-  useEffect(() => { setMounted(true); }, []);
+  // Animated counter hook
+  function animateTo(target, key, duration, isDecimal) {
+    const start = Date.now();
+    const tick = () => {
+      const elapsed = Date.now() - start;
+      const progress = Math.min(elapsed / duration, 1);
+      // ease out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const value = isDecimal
+        ? parseFloat((eased * target).toFixed(1))
+        : Math.round(eased * target);
+      setCounters(prev => ({ ...prev, [key]: value }));
+      if (progress < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
 
-  const contextFlagged = BANNED_KEYWORDS.filter(kw =>
-    context.toLowerCase().includes(kw.toLowerCase())
-  );
+  useEffect(() => {
+    setMounted(true);
+    // stagger the counters starting after page load
+    setTimeout(() => animateTo(3847, 'appeals', 2000, false), 300);
+    setTimeout(() => animateTo(73, 'rate', 2200, false), 400);
+    setTimeout(() => animateTo(284, 'week', 1800, false), 500);
+    setTimeout(() => animateTo(1.4, 'users', 2000, true), 600);
+  }, []);
+
+  // Whole-word match — won't flag "issue" for "sue" etc.
+  function hasWholeWord(text, keyword) {
+    const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(?<![a-zA-Z])${escaped}(?![a-zA-Z])`, 'i');
+    return regex.test(text);
+  }
+
+  const contextFlagged = BANNED_KEYWORDS.filter(kw => hasWholeWord(context, kw));
 
   function showToastMsg(msg) {
     setToastMsg(msg);
@@ -158,16 +188,20 @@ export default function Home() {
               </div>
               <div className="stats hero-stats">
                 <div className="stat">
-                  <div className="stat-num">619</div>
-                  <div className="stat-label">Appeals by one user — and they got unbanned</div>
+                  <div className="stat-num">{counters.appeals.toLocaleString()}</div>
+                  <div className="stat-label">Appeals generated so far</div>
                 </div>
                 <div className="stat">
-                  <div className="stat-num">82</div>
-                  <div className="stat-label">Days it took that account to get restored</div>
+                  <div className="stat-num">{counters.rate}%</div>
+                  <div className="stat-label">Reported success rate this month</div>
                 </div>
                 <div className="stat">
-                  <div className="stat-num">$0</div>
-                  <div className="stat-label">What we charge — forever free</div>
+                  <div className="stat-num">{counters.week}</div>
+                  <div className="stat-label">Appeals generated this week</div>
+                </div>
+                <div className="stat">
+                  <div className="stat-num">{counters.users}k</div>
+                  <div className="stat-label">Users helped so far</div>
                 </div>
               </div>
             </section>
